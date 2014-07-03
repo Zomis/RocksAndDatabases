@@ -21,6 +21,22 @@ public class RocksDatabaseMain {
 		 * - use md5-sum of levelset/zip to determine if it already exists locally/remotely
 		 * - 
 		 * 
+		 * Client: LOAD
+		 * Server: Fetches iformation about all levelsets, sends to client as JSON
+		 * 
+		 * Client: DLOD md5
+		 * Server: LSET info
+		 * Server: FILE `RndFile` JSON data
+		 * Server: DATA hex
+		 * Server: DATA hex
+		 * Server: DATA hex
+		 * Server: DATA hex
+		 * Server: FILE `RndFile` JSON data
+		 * Server: DATA hex
+		 * Server: DATA hex
+		 * Server: DEND
+		 * 
+		 * 
 		 * ? levelgroup table
 		 * 
 		 * 

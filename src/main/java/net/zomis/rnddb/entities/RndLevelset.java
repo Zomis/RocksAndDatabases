@@ -88,7 +88,8 @@ public class RndLevelset {
 	private String	checksum;
 
 	@Transient
-	private File	directory;
+	@JsonIgnore
+	private File	rootPath;
 
 	public int getFirstLevel() {
 		return firstLevel;
@@ -127,8 +128,9 @@ public class RndLevelset {
 	@Deprecated
 	List<RndLevel> loadLevels() {
 		List<RndLevel> levels = new ArrayList<>();
+		File directory = new File(getAbsolutePath());
 		for (RndFile rndFile : this.files) {
-			File file = new File(this.directory, rndFile.getFilename());
+			File file = new File(directory, rndFile.getFilename());
 			try (DataInputStream dataIn = new DataInputStream(new FileInputStream(file))) {
 				RocksLevel result = new ChunkRead().readFile(dataIn, RocksLevel.class);
 		
@@ -148,15 +150,17 @@ public class RndLevelset {
 	
 	
 	public void readFiles() {
-		if (this.directory == null)
-			throw new IllegalStateException("No path known.");
-		
+		File directory = getDirectory();
 		this.scanFiles(directory, directory);
 	}
 	
+	private File getDirectory() {
+		return new File(rootPath, this.path);
+	}
+
 	public void readFromInfo(File rootPath, File directory, RndLevelset parentSet) {
 		try {
-			this.directory = directory;
+			this.rootPath = rootPath;
 			
 			String filePath = directory.getAbsolutePath(); // "/var/data/stuff/xyz.dat";
 			String base = rootPath.getAbsolutePath(); // "/var/data";
@@ -230,6 +234,15 @@ public class RndLevelset {
 
 	@JsonIgnore
 	public String getAbsolutePath() {
-		return this.directory.getAbsolutePath();
+		return new File(rootPath, this.path).getAbsolutePath();
 	}
+	
+	public File getRootPath() {
+		return rootPath;
+	}
+	
+	public void setRootPath(File rootPath) {
+		this.rootPath = rootPath;
+	}
+	
 }

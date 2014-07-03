@@ -9,6 +9,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Query;
 
+import net.zomis.rnddb.entities.RndFile;
 import net.zomis.rnddb.entities.RndLevel;
 import net.zomis.rnddb.entities.RndLevelset;
 
@@ -55,6 +56,16 @@ public class RndDatabaseManager implements AutoCloseable, RndDbSource {
 			levelsets.forEach(lset -> lset.getLevels().size()); // fetch lazily
 			return new ArrayList<>(levelsets);
 		});
+	}
+	
+	@Override
+	public List<RndFile> getFilesInSet(Long id) {
+		EntityManager em = emf.createEntityManager();
+		RndLevelset levelset = em.find(RndLevelset.class, id);
+		List<RndFile> files = levelset.getLevels();
+		files.size();
+		em.close();
+		return files;
 	}
 	
 	@Override

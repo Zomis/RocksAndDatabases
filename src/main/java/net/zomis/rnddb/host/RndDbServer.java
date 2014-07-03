@@ -1,16 +1,20 @@
 package net.zomis.rnddb.host;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
+import net.zomis.rnddb.entities.RndFile;
 import net.zomis.rnddb.entities.RndLevel;
 import net.zomis.rnddb.entities.RndLevelset;
+import net.zomis.utils.MD5Util;
 import net.zomis.utils.ZSubstr;
 
 import org.apache.log4j.LogManager;
@@ -87,6 +91,10 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 							send.setMessage("Saved(?)");
 							send(send);
 							break;
+						case "DLOD":
+							RndLevelset levelset = source.getLevelSet(param);
+							sendFiles(levelset, source.getFilesInSet(levelset.getId()));
+							break;
 						default:
 							logger.warn("Unknown message: " + message);
 							send.setMessage("Unknown message: " + messageType);
@@ -99,12 +107,32 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 			}
 		}
 
-		private void send(SendMessage send) throws JsonProcessingException {
-			send(out, mapper.writeValueAsString(send));
+		public void sendFiles(RndLevelset levelset, List<RndFile> list) {
+			try {
+				send(mapper.writeValueAsString(levelset));
+				
+				for (RndFile file : list) {
+					File f = file.getFile();
+					byte[] bytes = Files.readAllBytes(f.toPath());
+					
+					send(mapper.writeValueAsString(file));
+					send(MD5Util.toHEX(bytes, false));
+					send("FEND");
+				}
+				send("DEND");
+			}
+			catch (IOException e) {
+				logger.error("Unable to send file", e);
+			}
 		}
 
-		private void send(PrintWriter out, String writeValueAsString) {
-			out.write(writeValueAsString);
+		private void send(SendMessage send) throws JsonProcessingException {
+			send(mapper.writeValueAsString(send));
+		}
+
+		private void send(String writeValueAsString) {
+			logger.debug("Server sending " + writeValueAsString.length() + ": " + writeValueAsString);
+			out.write(writeValueAsString + (char) 0);
 			out.flush();
 		}
 	}
@@ -139,6 +167,10 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 	public List<RndLevelset> getAllLevelSets() {
 		return source.getAllLevelSets();
 	}
-	
+
+	@Override
+	public List<RndFile> getFilesInSet(Long id) {
+		return source.getFilesInSet(id);
+	}
 	
 }

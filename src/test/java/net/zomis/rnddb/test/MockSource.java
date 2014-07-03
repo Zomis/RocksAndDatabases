@@ -3,6 +3,7 @@ package net.zomis.rnddb.test;
 import java.util.List;
 
 import net.zomis.rnddb.RndScanner;
+import net.zomis.rnddb.entities.RndFile;
 import net.zomis.rnddb.entities.RndLevel;
 import net.zomis.rnddb.entities.RndLevelset;
 import net.zomis.rnddb.host.RndDbSource;
@@ -21,7 +22,7 @@ public class MockSource implements RndDbSource {
 
 	@Override
 	public RndLevelset getLevelSet(String md5) {
-		throw new UnsupportedOperationException();
+		return all.get(0);
 	}
 
 	@Override
@@ -32,6 +33,12 @@ public class MockSource implements RndDbSource {
 	@Override
 	public RndLevel getLevel(String md5) {
 		return null;
+	}
+
+	@Override
+	public List<RndFile> getFilesInSet(Long id) {
+		all.get(0).readFiles();
+		return all.get(0).getLevels();
 	}
 
 }

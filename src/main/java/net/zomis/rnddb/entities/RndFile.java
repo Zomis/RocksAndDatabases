@@ -17,6 +17,8 @@ import net.zomis.utils.MD5;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(indexes = {@Index(columnList="md5")})
 public class RndFile {
@@ -55,7 +57,8 @@ public class RndFile {
 		logger.info("MD5 for " + filename);
 	}
 	
-	private File getFile() {
+	@JsonIgnore
+	public File getFile() {
 		return new File(levelset.getAbsolutePath(), this.getFilename());
 	}
 
