@@ -142,7 +142,7 @@ public class OverviewController {
 	private void scanAll(ActionEvent event) {
 		logger.info("Scanning " + userDirectory);
 		Map<RndLevelset, TreeItem<RndLevelset>> nodes = new HashMap<>();
-		RndScanner.scan(RndScanner.getLevelsDir(userDirectory), lset -> {
+		RndScanner.scanLevels(userDirectory, lset -> {
 			TreeItem<RndLevelset> item = new TreeItem<>(lset);
 			item.setGraphic(lset.isLevelGroup() ? new Label("GRP") : new CheckBox());
 			nodes.put(lset, item);

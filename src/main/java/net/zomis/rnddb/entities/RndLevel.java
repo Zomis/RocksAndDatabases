@@ -145,7 +145,7 @@ public class RndLevel {
 		try {
 			this.filedata = Files.readAllBytes(this.file.toPath());
 			this.md5 = MD5.md5(this.filedata);
-			logger.info(new ObjectMapper().writeValueAsString(this));
+//			logger.info(new ObjectMapper().writeValueAsString(this));
 		}
 		catch (IOException e) {
 			logger.error("Cannot calc MD5 of " + this, e);

@@ -30,6 +30,8 @@ import net.zomis.utils.MD5;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 public class RndLevelset {
 	private static final Logger logger = LogManager.getLogger(RndLevelset.class);
@@ -41,8 +43,14 @@ public class RndLevelset {
 	private String	name;
 	private String	author;
 	
+	@ManyToOne
+	private RndLevelset branchFrom;
+	
 	private String path;
 
+	@OneToMany(cascade = CascadeType.PERSIST, mappedBy = "levelset")
+	private List<RndFile> files = new ArrayList<>();
+	
 	public Long getId() {
 		return id;
 	}
@@ -66,12 +74,9 @@ public class RndLevelset {
 	
 	@Override
 	public String toString() {
-		return String.format("%s: %s. (%d--%d, %d levels found)", author, name, firstLevel, levelCount - firstLevel, levels.size());
+		return String.format("%s: %s. (%d--%d, %d files)", author, name, firstLevel, levelCount - firstLevel, files.size());
 	}
 	
-	@OneToMany(mappedBy = "levelset", cascade = { CascadeType.PERSIST })
-	private List<RndLevel> levels = new ArrayList<>();
-
 	private int	firstLevel;
 	private int	levelCount;
 
@@ -83,7 +88,7 @@ public class RndLevelset {
 	private String	checksum;
 
 	@Transient
-	private File	confPath;
+	private File	directory;
 
 	public int getFirstLevel() {
 		return firstLevel;
@@ -93,47 +98,74 @@ public class RndLevelset {
 		return levelCount;
 	}
 	
-	public List<RndLevel> getLevels() {
-		return levels;
+	public List<RndFile> getLevels() {
+		return files;
 	}
 	
-	public void readFiles() {
-		if (this.confPath == null)
-			throw new IllegalStateException("No path known.");
-		
-		File directory = confPath.getParentFile();
+	private void scanFiles(File root, File path) {
 		int success = 0;
 		int total = 0;
-		for (File file : directory.listFiles()) {
-			if (file.isDirectory())
+		for (File file : path.listFiles()) {
+			if (file.isDirectory()) {
+				scanFiles(root, file);
 				continue;
-			if (!file.getName().matches("\\d{3}\\.level"))
-				continue;
+			}
+//			if (!file.getName().matches("\\d{3}\\.level"))
+//				continue;
 			
+			RndFile rndFile = new RndFile();
+			rndFile.setData(this, root, file);
+			addFile(rndFile);
+			
+			total++;
+		}
+		if (total > 0) {
+			logger.info("Directory " + path + ": " + success + " / " + total);
+		}
+	}
+
+	@Deprecated
+	List<RndLevel> loadLevels() {
+		List<RndLevel> levels = new ArrayList<>();
+		for (RndFile rndFile : this.files) {
+			File file = new File(this.directory, rndFile.getFilename());
 			try (DataInputStream dataIn = new DataInputStream(new FileInputStream(file))) {
 				RocksLevel result = new ChunkRead().readFile(dataIn, RocksLevel.class);
+		
 				if (result != null) {
-					success++;
 					RndLevel level = new RndLevel();
 					level.setFromLevel(result, this, file);
 //					level.setFiledata(Files.readAllBytes(file.toPath()));
-					this.addLevel(level);
+					levels.add(level);
 				}
 			}
 			catch (IOException e) {
 				logger.error("Error reading " + file, e);
 			}
-			total++;
 		}
-		if (total > 0) {
-			logger.info("Directory " + directory + ": " + success + " / " + total);
-		}
+		return levels;
 	}
 	
-	public void readFromInfo(File conf, RndLevelset parent) {
+	
+	public void readFiles() {
+		if (this.directory == null)
+			throw new IllegalStateException("No path known.");
+		
+		this.scanFiles(directory, directory);
+	}
+	
+	public void readFromInfo(File rootPath, File directory, RndLevelset parentSet) {
 		try {
-			this.confPath = conf;
-			List<String> lines = Files.readAllLines(conf.toPath(), StandardCharsets.ISO_8859_1);
+			this.directory = directory;
+			
+			String filePath = directory.getAbsolutePath(); // "/var/data/stuff/xyz.dat";
+			String base = rootPath.getAbsolutePath(); // "/var/data";
+			String relative = new File(base).toURI().relativize(new File(filePath).toURI()).getPath();
+			
+			this.path = relative;
+			File configFile = new File(directory, "levelinfo.conf");
+			
+			List<String> lines = Files.readAllLines(configFile.toPath(), StandardCharsets.ISO_8859_1);
 			lines.replaceAll(String::trim);
 			lines.removeIf(str -> str.startsWith("#"));
 			lines.removeIf(str -> !str.contains(":"));
@@ -144,11 +176,11 @@ public class RndLevelset {
 			this.firstLevel = Integer.parseInt(map.getOrDefault("first_level", "0"));
 			this.levelCount = Integer.parseInt(map.getOrDefault("levels", "0"));
 			this.levelGroup = Boolean.parseBoolean(map.getOrDefault("level_group", "false"));
-			this.parent = parent;
+			this.parent = parentSet;
 			logger.trace(new TreeMap<>(map));
 		}
 		catch (Exception e) {
-			Logger.getLogger(RndLevelset.class).error("Cannot read " + conf.getAbsolutePath(), e);
+			Logger.getLogger(RndLevelset.class).error("Cannot read " + directory.getAbsolutePath(), e);
 		}
 	}
 
@@ -160,20 +192,20 @@ public class RndLevelset {
 		str.append(this.firstLevel);
 		str.append(this.levelCount);
 		str.append(this.levelGroup);
-		levels.stream().filter(level -> level.getMd5() == null).forEach(level -> {
-			level.calcMD5();
-			str.append(level.getNumber());
+		files.stream().filter(level -> level.getMd5() == null).forEach(level -> {
+			level.calcMd5();
+			str.append(level.getFilename());
 			str.append(level.getMd5());
 		});
 		
 		this.checksum = MD5.md5(str.toString());
 		
 		logger.debug(this);
-		levels.forEach(level -> logger.debug(level + ": " + level.getMd5()));
+		files.forEach(level -> logger.debug(level + ": " + level.getMd5()));
 	}
 	
-	public void addLevel(RndLevel level) {
-		this.levels.add(level);
+	public void addFile(RndFile level) {
+		this.files.add(level);
 	}
 	
 	public RndLevelset getParent() {
@@ -194,5 +226,10 @@ public class RndLevelset {
 	
 	public void setPath(String path) {
 		this.path = path;
+	}
+
+	@JsonIgnore
+	public String getAbsolutePath() {
+		return this.directory.getAbsolutePath();
 	}
 }

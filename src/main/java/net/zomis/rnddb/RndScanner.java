@@ -1,9 +1,6 @@
 package net.zomis.rnddb;
 
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -11,21 +8,24 @@ import java.util.prefs.Preferences;
 
 import javax.swing.JFileChooser;
 
-import net.zomis.chunks.ChunkRead;
-import net.zomis.rnddb.entities.RndLevel;
 import net.zomis.rnddb.entities.RndLevelset;
-import net.zomis.rnddb.files.RocksLevel;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 public class RndScanner {
+	@Deprecated
 	private Preferences prefs = Preferences.userNodeForPackage(RndScanner.class);
+	
 	private static final Logger logger = LogManager.getLogger(RndScanner.class);
 	
+	@Deprecated
 	public static final String GAME_DIR = "rnd";
+	
+	@Deprecated
 	public static final String USER_DIR = "user";
 	
+	@Deprecated
 	public File inputDirectory(String key) {
 		String str = prefs.get(key, null);
 		final File file;
@@ -50,14 +50,12 @@ public class RndScanner {
 		
 	}
 	
-	public static List<RndLevelset> scan(File directory, Consumer<RndLevelset> scanCallback) {
-		return scanDirectory(directory, null, scanCallback);
+	public static List<RndLevelset> scanLevels(File directory, Consumer<RndLevelset> scanCallback) {
+		return scanDirectory(directory, new File(directory, "levels"), null, scanCallback);
 	}
 	
-	private static List<RndLevelset> scanDirectory(File directory, RndLevelset parent, Consumer<RndLevelset> scanCallback) {
+	private static List<RndLevelset> scanDirectory(File rootPath, File directory, RndLevelset parent, Consumer<RndLevelset> scanCallback) {
 		List<RndLevelset> list = new ArrayList<>();
-		int success = 0;
-		int total = 0;
 		for (File file : directory.listFiles()) {
 			if (file.isDirectory()) {
 				RndLevelset levelSet = new RndLevelset();
@@ -66,14 +64,10 @@ public class RndScanner {
 					logger.debug("Is directory but no levelinfo found: " + file);
 					continue;
 				}
-				levelSet.readFromInfo(conf, parent);
+				levelSet.readFromInfo(rootPath, conf.getParentFile(), parent);
 				list.add(levelSet);
 				scanCallback.accept(levelSet);
-				list.addAll(scanDirectory(file, levelSet, scanCallback));
-				continue;
-			}
-			
-			if (!file.getName().endsWith(".level")) {
+				list.addAll(scanDirectory(rootPath, file, levelSet, scanCallback));
 				continue;
 			}
 		}

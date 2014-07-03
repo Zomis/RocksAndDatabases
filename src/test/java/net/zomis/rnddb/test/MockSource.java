@@ -9,7 +9,7 @@ import net.zomis.rnddb.host.RndDbSource;
 
 public class MockSource implements RndDbSource {
 
-	private final List<RndLevelset>	all = RndScanner.scan(TestFiles.fileFor("levels"), lset -> {});
+	private final List<RndLevelset>	all = RndScanner.scanLevels(TestFiles.fileFor("userdir"), lset -> {});
 
 	public MockSource() {
 	}

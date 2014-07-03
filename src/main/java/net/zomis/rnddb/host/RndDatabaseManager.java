@@ -67,7 +67,7 @@ public class RndDatabaseManager implements AutoCloseable, RndDbSource {
 		List<RndLevelset> levelsets = query.getResultList();
 		RndLevelset result = levelsets.stream().findFirst().orElse(null);
 		if (result != null) {
-			result.getLevels().forEach(level -> level.clearBigData()); // don't transport too much data!
+//			result.getLevels().forEach(level -> level.clearBigData()); // don't transport too much data!
 		}
 		em.close();
 		return result;

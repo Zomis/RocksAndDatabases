@@ -1,7 +1,6 @@
 package net.zomis.chunks;
 
 import java.io.DataInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -12,8 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import net.zomis.rnddb.RndScanner;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -254,19 +251,6 @@ public class ChunkRead {
 		return read;
 	}
 
-	public static void main(String[] args) {
-		
-		File gameDir = new RndScanner().inputDirectory(RndScanner.GAME_DIR);
-		File userDir = new RndScanner().inputDirectory(RndScanner.USER_DIR);
-		
-//		File dir = new File(".");
-//		RndScanner.scan(dir);
-//		RnddbFrame.showFrame();
-		
-		RndScanner.scan(RndScanner.getLevelsDir(gameDir), (lset) -> {});
-		RndScanner.scan(RndScanner.getLevelsDir(userDir), (lset) -> {});
-	}
-	
 	private static Method findReadMethod(Class<?> type, SerializationContext context) {
 		return Arrays.stream(type.getMethods()).filter(method -> method.getAnnotation(OnRead.class) != null).findFirst().orElse(null);
 	}
