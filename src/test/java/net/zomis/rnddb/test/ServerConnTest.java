@@ -44,7 +44,7 @@ public class ServerConnTest {
 	
 	@Test(timeout = 20000)
 	public void serverClient() throws Exception {
-		try (RndDbServer server = new RndDbServer(source)) {
+		try (RndDbServer server = new RndDbServer(null, source)) {
 			Thread.sleep(2000);
 			RndDbClient client = new RndDbClient("127.0.0.1", 4242);
 			Thread.sleep(2000);
@@ -57,7 +57,7 @@ public class ServerConnTest {
 	
 	@Test(timeout = 40000)
 	public void serverClientTransferFiles() throws Exception {
-		try (RndDbServer server = new RndDbServer(source)) {
+		try (RndDbServer server = new RndDbServer(null, source)) {
 			Thread.sleep(2000);
 			RndDbClient client = new RndDbClient("127.0.0.1", 4242);
 			Thread.sleep(2000);

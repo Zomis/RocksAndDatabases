@@ -8,7 +8,7 @@ import net.zomis.rnddb.entities.RndLevelset;
 
 public interface RndDbSource {
 
-	void saveLevelSet(RndLevelset value);
+	RndLevelset saveLevelSet(RndLevelset value);
 
 	RndLevelset getLevelSet(String md5);
 	RndLevel getLevel(String md5);

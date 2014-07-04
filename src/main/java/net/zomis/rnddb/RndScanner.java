@@ -55,6 +55,9 @@ public class RndScanner {
 	}
 	
 	private static List<RndLevelset> scanDirectory(File rootPath, File directory, RndLevelset parent, Consumer<RndLevelset> scanCallback) {
+		if (directory == null || !directory.exists()) {
+			throw new IllegalArgumentException("Invalid directory: " + directory);
+		}
 		List<RndLevelset> list = new ArrayList<>();
 		for (File file : directory.listFiles()) {
 			if (file.isDirectory()) {

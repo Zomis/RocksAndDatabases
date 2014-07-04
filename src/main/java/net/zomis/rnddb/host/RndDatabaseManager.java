@@ -31,18 +31,24 @@ public class RndDatabaseManager implements AutoCloseable, RndDbSource {
 	}
 
 	@Override
-	public void saveLevelSet(RndLevelset value) {
+	public RndLevelset saveLevelSet(RndLevelset value) {
 		RndLevelset previous = getLevelSet(value.getChecksum());
+		if (value.getParent() != null) {
+			logger.info("Parent is: " + value.getParent());
+			RndLevelset parent = getLevelSet(value.getParent().getChecksum());
+			value.setParent(parent);
+		}
 		logger.info("Previous: " + previous);
 		if (previous != null) {
 			logger.error("Duplicate Levelset: " + value + " with sum " + value.getChecksum());
-			return;
+			return null;
 		}
-		tryCatch(em -> {
+		return tryCatch(em -> {
 			em.getTransaction().begin();
+			logger.info("Persisting " + value);
 			em.persist(value);
 			em.getTransaction().commit();
-			return null;
+			return value;
 		});
 	}
 	
@@ -77,7 +83,9 @@ public class RndDatabaseManager implements AutoCloseable, RndDbSource {
 		@SuppressWarnings("unchecked")
 		List<RndLevelset> levelsets = query.getResultList();
 		RndLevelset result = levelsets.stream().findFirst().orElse(null);
+		
 		if (result != null) {
+			result.clearLevelsForSending();
 //			result.getLevels().forEach(level -> level.clearBigData()); // don't transport too much data!
 		}
 		em.close();

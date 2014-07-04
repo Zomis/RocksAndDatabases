@@ -14,13 +14,10 @@ import net.zomis.rnddb.entities.RndLevelset;
 public class RocksDatabaseMain {
 
 	public static void main(String[] args) {
-		/* Prio 1: Scan levels, save to local database (Postgres)
-		 * 
+		/* x Prio 1: Scan levels, save to local database (Postgres)
 		 * - levelsets to .zip ---> Save as file, not bytearraay in database
 		 * - levelsets is the interesting things, not levels and/or levelgroups
 		 * - use md5-sum of levelset/zip to determine if it already exists locally/remotely
-		 * - 
-		 * 
 		 * Client: LOAD
 		 * Server: Fetches iformation about all levelsets, sends to client as JSON
 		 * 
@@ -35,10 +32,6 @@ public class RocksDatabaseMain {
 		 * Server: DATA hex
 		 * Server: DATA hex
 		 * Server: DEND
-		 * 
-		 * 
-		 * ? levelgroup table
-		 * 
 		 * 
 		 * Prio 2: Request levels/levelsets from a server
 		 * String location: server:port/id

@@ -54,7 +54,7 @@ public class RndFile {
 		catch (IOException e) {
 			logger.error("Cannot calc MD5 of " + this, e);
 		}
-		logger.info("MD5 for " + filename);
+		logger.trace("MD5 for " + filename + ": " + this.md5);
 	}
 	
 	@JsonIgnore
@@ -79,6 +79,9 @@ public class RndFile {
 	}
 
 	public void setData(RndLevelset rndLevelset, File root, File file) {
+		if (file.isDirectory()) {
+			throw new IllegalArgumentException("RndFile cannot be set to a directory: " + file);
+		}
 		String filePath = file.getAbsolutePath(); // "/var/data/stuff/xyz.dat";
 		String base = root.getAbsolutePath(); // "/var/data";
 		String relative = new File(base).toURI().relativize(new File(filePath).toURI()).getPath();

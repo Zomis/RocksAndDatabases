@@ -19,6 +19,7 @@ import net.zomis.rnddb.host.RndDatabaseManager;
 import net.zomis.rnddb.host.RndDbClient;
 import net.zomis.rnddb.host.RndDbServer;
 import net.zomis.rnddb.host.RndDbSource;
+import net.zomis.rnddb.host.RootPathFinder;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -60,7 +61,7 @@ public class Main extends Application {
 	private void localOnly(ActionEvent event) {
 		emf = DatabaseConfig.localhostEmbedded();
 		db = new RndDatabaseManager(emf);
-		OverviewController.start(db);
+		OverviewController.start(db, db);
 		window.close();
 	}
 	
@@ -68,8 +69,11 @@ public class Main extends Application {
 	private void host(ActionEvent event) {
 		try {
 			emf = DatabaseConfig.fromFile(new File("connection.properties"));
-			db = new RndDbServer(new RndDatabaseManager(emf));
-			OverviewController.start(db);
+			
+			RedirectRootPathFinder changer = new RedirectRootPathFinder();
+			db = new RndDbServer(changer, new RndDatabaseManager(emf));
+			OverviewController overview = OverviewController.start(db, db);
+			changer.redirect = overview;
 			window.close();
 		}
 		catch (IOException e) {
@@ -77,18 +81,31 @@ public class Main extends Application {
 		}
 	}
 	
+	private class RedirectRootPathFinder implements RootPathFinder {
+		RootPathFinder redirect;
+		
+		@Override
+		public File getRootPath() {
+			return redirect.getRootPath();
+		}
+	};
+	
 	@FXML
 	private void connect(ActionEvent event) {
 		emf = DatabaseConfig.localhostEmbedded();
 		String address = serverAddress.getText();
 		String[] split = address.split(":");
 		int port = 4242;
+		if (split[0].isEmpty()) {
+			split[0] = "127.0.0.1";
+		}
 		if (split.length > 1) {
 			port = Integer.parseInt(split[1]);
 		}
 		try {
+			RndDatabaseManager local =  new RndDatabaseManager(emf);
 			db = new RndDbClient(split[0], port);
-			OverviewController.start(db);
+			OverviewController.start(local, db);
 			window.close();
 		}
 		catch (IOException e) {
@@ -97,7 +114,7 @@ public class Main extends Application {
 	}
 	
 	public static void main(String[] args) {
-		PropertyConfigurator.configure("log4j.properties");
+		PropertyConfigurator.configure(Main.class.getResource("log4j.properties"));
 		launch(args);
 	}
 }

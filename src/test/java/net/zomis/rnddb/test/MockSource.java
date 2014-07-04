@@ -16,7 +16,7 @@ public class MockSource implements RndDbSource {
 	}
 	
 	@Override
-	public void saveLevelSet(RndLevelset value) {
+	public RndLevelset saveLevelSet(RndLevelset value) {
 		throw new UnsupportedOperationException();
 	}
 

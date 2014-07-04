@@ -28,9 +28,11 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 	private static final Logger logger = LogManager.getLogger(RndDbServer.class);
 	private final ServerSocket server;
 	private final RndDbSource source;
+	private final RootPathFinder rootPath;
 	
-	public RndDbServer(RndDbSource source) throws IOException {
+	public RndDbServer(RootPathFinder rootPath, RndDbSource source) throws IOException {
 		server = new ServerSocket(4242);
+		this.rootPath = rootPath;
 		this.source = source;
 		new Thread(this::listen).start();
 	}
@@ -76,12 +78,13 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 					switch (messageType) {
 						case "LOAD":
 							send.setSets(source.getAllLevelSets());
+							send.getSets().forEach(lset -> lset.clearLevelsForSending());
 							send(send);
 							break;
-						case "LVEL":
-							send.setLevels(Arrays.asList(source.getLevel(param)));
-							send(send);
-							break;
+//						case "LVEL":
+//							send.setLevels(Arrays.asList(source.getLevel(param)));
+//							send(send);
+//							break;
 						case "LSET":
 							send.setSets(Arrays.asList(source.getLevelSet(param)));
 							send(send);
@@ -92,8 +95,8 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 							send(send);
 							break;
 						case "DLOD":
-							RndLevelset levelset = source.getLevelSet(param);
-							sendFiles(levelset, source.getFilesInSet(levelset.getId()));
+//							RndLevelset levelset = source.getLevelSet();
+							sendFiles(param); //levelset, source.getFilesInSet(levelset.getId()));
 							break;
 						default:
 							logger.warn("Unknown message: " + message);
@@ -107,11 +110,17 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 			}
 		}
 
-		public void sendFiles(RndLevelset levelset, List<RndFile> list) {
+		public void sendFiles(String md5) { // RndLevelset levelset, List<RndFile> list) {
 			try {
+				RndLevelset levelset = source.getLevelSet(md5);
+				if (rootPath != null) {
+					levelset.setRootPath(rootPath.getRootPath());
+				}
+				List<RndFile> list = source.getFilesInSet(levelset.getId());
 				send(mapper.writeValueAsString(levelset));
 				
 				for (RndFile file : list) {
+					file.setLevelset(levelset);
 					File f = file.getFile();
 					byte[] bytes = Files.readAllBytes(f.toPath());
 					
@@ -128,6 +137,7 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 
 		private void send(SendMessage send) throws JsonProcessingException {
 			send(mapper.writeValueAsString(send));
+			send("DEND");
 		}
 
 		private void send(String writeValueAsString) {
@@ -149,8 +159,8 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 	}
 
 	@Override
-	public void saveLevelSet(RndLevelset value) {
-		source.saveLevelSet(value);
+	public RndLevelset saveLevelSet(RndLevelset value) {
+		return source.saveLevelSet(value);
 	}
 
 	@Override

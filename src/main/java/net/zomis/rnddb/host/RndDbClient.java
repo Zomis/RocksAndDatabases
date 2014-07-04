@@ -77,9 +77,9 @@ public class RndDbClient implements RndDbSource {
 		RndFile file = null;
 		StringBuilder fileData = new StringBuilder();
 		for (String data : datas) {
-			if (data.startsWith("DEND")) {
-				break;
-			}
+//			if (data.startsWith("DEND")) {
+//				break;
+//			}
 			
 			if (file == null) {
 				file = mapper.reader(RndFile.class).readValue(data);
@@ -117,23 +117,25 @@ public class RndDbClient implements RndDbSource {
 		while (true) {
 			take = messages.take();
 			logger.info("Take: " + take);
-			takes.add(take);
 			if (take.endsWith("DEND")) {
 				break;
 			}
+			takes.add(take);
 		}
 		return takes;
 	}
 
 	@Override
-	public void saveLevelSet(RndLevelset value) {
+	public RndLevelset saveLevelSet(RndLevelset value) {
 		try {
 			send("SSET " + mapper.writeValueAsString(value));
 			SendMessage result = receive();
 			logger.info(result.getMessage());
+			return result.getSets().stream().findFirst().orElse(null);
 		}
 		catch (JsonProcessingException e) {
 			logger.error("Error sending request", e);
+			return null;
 		}
 	}
 
@@ -153,7 +155,8 @@ public class RndDbClient implements RndDbSource {
 
 	private SendMessage receive() {
 		try {
-			SendMessage result = mapper.reader(SendMessage.class).readValue(messages.take());
+			String value = String.join("", takeUntilEnd());
+			SendMessage result = mapper.reader(SendMessage.class).readValue(value);
 			return result;
 		}
 		catch (InterruptedException | IOException e) {

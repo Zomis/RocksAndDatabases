@@ -74,13 +74,14 @@ public class RndLevelset {
 	
 	@Override
 	public String toString() {
-		return String.format("%s: %s. (%d--%d, %d files)", author, name, firstLevel, levelCount - firstLevel, files.size());
+		return String.format("%s: %s. (%d--%d, %s)", author, name, firstLevel, levelCount - firstLevel, checksum);
 	}
 	
 	private int	firstLevel;
 	private int	levelCount;
 
 	@ManyToOne(cascade = CascadeType.PERSIST)
+	@Deprecated
 	private RndLevelset	parent;
 
 	private boolean	levelGroup;
@@ -108,11 +109,11 @@ public class RndLevelset {
 		int total = 0;
 		for (File file : path.listFiles()) {
 			if (file.isDirectory()) {
-				scanFiles(root, file);
+				if (!this.isLevelGroup()) {
+					scanFiles(root, file);
+				}
 				continue;
 			}
-//			if (!file.getName().matches("\\d{3}\\.level"))
-//				continue;
 			
 			RndFile rndFile = new RndFile();
 			rndFile.setData(this, root, file);
@@ -154,6 +155,7 @@ public class RndLevelset {
 		this.scanFiles(directory, directory);
 	}
 	
+	@JsonIgnore
 	private File getDirectory() {
 		return new File(rootPath, this.path);
 	}
@@ -205,13 +207,14 @@ public class RndLevelset {
 		this.checksum = MD5.md5(str.toString());
 		
 		logger.debug(this);
-		files.forEach(level -> logger.debug(level + ": " + level.getMd5()));
+		files.forEach(level -> logger.trace(level + ": " + level.getMd5()));
 	}
 	
 	public void addFile(RndFile level) {
 		this.files.add(level);
 	}
 	
+	@Deprecated
 	public RndLevelset getParent() {
 		return parent;
 	}
@@ -234,7 +237,7 @@ public class RndLevelset {
 
 	@JsonIgnore
 	public String getAbsolutePath() {
-		return new File(rootPath, this.path).getAbsolutePath();
+		return getDirectory().getAbsolutePath();
 	}
 	
 	public File getRootPath() {
@@ -243,6 +246,15 @@ public class RndLevelset {
 	
 	public void setRootPath(File rootPath) {
 		this.rootPath = rootPath;
+	}
+
+	@Deprecated
+	public void setParent(RndLevelset parent) {
+		this.parent = parent;
+	}
+
+	public void clearLevelsForSending() {
+		this.files = new ArrayList<>();
 	}
 	
 }
