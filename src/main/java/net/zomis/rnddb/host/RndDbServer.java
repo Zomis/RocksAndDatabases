@@ -106,7 +106,7 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 				}
 			}
 			catch (IOException e) {
-				logger.error("Error reading from server", e);
+				logger.error("Error reading from client", e);
 			}
 		}
 

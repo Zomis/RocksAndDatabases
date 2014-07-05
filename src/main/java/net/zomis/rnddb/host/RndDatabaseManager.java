@@ -32,12 +32,16 @@ public class RndDatabaseManager implements AutoCloseable, RndDbSource {
 
 	@Override
 	public RndLevelset saveLevelSet(RndLevelset value) {
-		RndLevelset previous = getLevelSet(value.getChecksum());
-		if (value.getParent() != null) {
-			logger.info("Parent is: " + value.getParent());
-			RndLevelset parent = getLevelSet(value.getParent().getChecksum());
-			value.setParent(parent);
+		if (value.hasID()) {
+			return value;
 		}
+		
+		RndLevelset previous = getLevelSet(value.getChecksum());
+//		if (value.getParent() != null) {
+//			logger.info("Parent is: " + value.getParent());
+//			RndLevelset parent = getLevelSet(value.getParent().getChecksum());
+//			value.setParent(parent);
+//		}
 		logger.info("Previous: " + previous);
 		if (previous != null) {
 			logger.error("Duplicate Levelset: " + value + " with sum " + value.getChecksum());

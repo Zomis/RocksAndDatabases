@@ -2,6 +2,8 @@ package net.zomis.rnddb.main;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +113,7 @@ public class OverviewController implements RootPathFinder {
 		
 		RndLevelset rootSet = new RndLevelset();
 		rootSet.setName("Local");
+		rootSet.setPath("levels/");
         TreeItem<RndLevelset> rootItem = new TreeItem<>(rootSet);
         rootItem.setExpanded(true);
         rootItem.setGraphic(new CheckBox());
@@ -118,6 +121,7 @@ public class OverviewController implements RootPathFinder {
 		
 		RndLevelset remoteRootSet = new RndLevelset();
 		remoteRootSet.setName("Remote");
+		remoteRootSet.setPath("levels/");
         TreeItem<RndLevelset> remoteRootItem = new TreeItem<>(remoteRootSet);
         remoteRootItem.setExpanded(true);
         remoteRootItem.setGraphic(new CheckBox());
@@ -134,6 +138,7 @@ public class OverviewController implements RootPathFinder {
 
 	@FXML
 	private void download(ActionEvent event) {
+			
 		if (remoteTree.getRoot().getChildren().isEmpty()) {
 			showDBcontents(event);
 		}
@@ -148,9 +153,7 @@ public class OverviewController implements RootPathFinder {
 			if (remote instanceof RndDbClient) {
 				RndDbClient client = (RndDbClient) remote;
 				try {
-					for (TreeItem<RndLevelset> item : remoteTree.getSelectionModel().getSelectedItems()) {
-						client.downloadLevelSet(userDirectory, item.getValue());
-					}
+					downloadNode(client, remoteTree.getRoot());
 				}
 				catch (InterruptedException | IOException e) {
 					logger.error("Error downloading selected: " + remoteTree.getSelectionModel().getSelectedItems(), e);
@@ -159,6 +162,43 @@ public class OverviewController implements RootPathFinder {
 		}
 	}
 	
+	private void downloadNode(RndDbClient client, TreeItem<RndLevelset> root) throws InterruptedException, IOException {
+		File downloadDir = new File(userDirectory, "levels/download");
+		createLevelsInfoConf(new File(downloadDir, "levels"), userDirectory);
+		
+		if (root.isLeaf()) {
+			CheckBox checkbox = (CheckBox) root.getGraphic();
+			if (!checkbox.isSelected()) {
+				return;
+			}
+			for (TreeItem<RndLevelset> parent = root.getParent(); parent != null; parent = parent.getParent()) {
+				if (parent.getValue().hasChecksum())
+					client.downloadLevelSet(downloadDir, parent.getValue());
+			}
+			if (root.getValue().hasChecksum()) {
+				client.downloadLevelSet(downloadDir, root.getValue());
+			}
+		}
+		
+		for (TreeItem<RndLevelset> item : root.getChildren()) {
+			downloadNode(client, item);
+		}
+		
+	}
+
+	private void createLevelsInfoConf(File downloadDir, File rootDirectory) throws IOException {
+		if (downloadDir.getParentFile().getAbsoluteFile().equals(rootDirectory.getAbsoluteFile())) {
+			return;
+		}
+		downloadDir.mkdirs();
+		File saveFile = new File(downloadDir, "levelinfo.conf");
+		if (!saveFile.exists()) {
+			logger.info("Creating conf at " + saveFile);
+			Files.copy(OverviewController.class.getResourceAsStream("levelinfo.conf"), saveFile.toPath());
+		}
+		createLevelsInfoConf(downloadDir.getParentFile(), rootDirectory);
+	}
+
 	@FXML
 	private void upload(ActionEvent event) {
 		this.saveNodeToDB(localTree.getRoot());
@@ -170,51 +210,70 @@ public class OverviewController implements RootPathFinder {
 	}
 	
 	private void saveNodeToDB(TreeItem<RndLevelset> root) {
-		// TODO: Also need to save `levelinfo.conf` of all parent levelsets!
 		root.getChildren().stream().filter(node -> !node.isLeaf()).forEach(this::saveNodeToDB);
 		
 		root.getChildren().stream().filter(node -> node.isLeaf()).filter(node -> ((CheckBox) node.getGraphic()).isSelected()).forEach(leaf -> {
-			RndLevelset parent = leaf.getValue().getParent();
+			TreeItem<RndLevelset> parent = leaf.getParent();
 			while (parent != null) {
-				parent.readFiles();
-				parent.calcMD5();
-				remote.saveLevelSet(parent);
-				
+				// save `levelinfo.conf` and potentially also other files of all parent levelsets!
+				if (parent.getParent() != null) {
+					realSaveNode(parent);
+				}
 				parent = parent.getParent();
 			}
-			leaf.getValue().readFiles();
-			leaf.getValue().calcMD5();
-			remote.saveLevelSet(leaf.getValue());
+			realSaveNode(leaf);
 		});
+	}
+
+	private void realSaveNode(TreeItem<RndLevelset> node) {
+		RndLevelset levelset = node.getValue();
+		levelset.readFiles();
+		levelset.calcMD5();
+		remote.saveLevelSet(levelset);
 	}
 
 	private void scanAll(ActionEvent event) {
 		logger.info("Scanning " + userDirectory);
-		Map<RndLevelset, TreeItem<RndLevelset>> nodes = new HashMap<>();
+		Map<String, TreeItem<RndLevelset>> nodes = nodesMapForTree(localTree);
+		logger.info("Nodes: " + nodes);
 		RndScanner.scanLevels(userDirectory, lset -> {
 			TreeItem<RndLevelset> item = new TreeItem<>(lset);
 			item.setGraphic(lset.isLevelGroup() ? new Label("GRP") : new CheckBox());
-			nodes.put(lset, item);
-			TreeItem<RndLevelset> parent = lset.getParent() != null ? nodes.get(lset.getParent()) : localTree.getRoot();
+			nodes.put(lset.getPath(), item);
+			logger.trace("Nodes add: " + lset.getPath() + " == " + item);
+			logger.trace("Nodes search: " + lset.getParentPath());
+			
+			TreeItem<RndLevelset> parent = lset.hasParentPath() ? nodes.get(lset.getParentPath()) : localTree.getRoot();
+			
 			parent.getChildren().add(item);
 		});
 	}
 	
-	private void populateRemoteTree(RndDbSource source) {
-		List<RndLevelset> allSets = source.getAllLevelSets();
-		RndLevelset nullParent = remoteTree.getRoot().getValue();
-		Map<RndLevelset, List<RndLevelset>> childs = allSets.stream().collect(Collectors.groupingBy(set -> Optional.ofNullable(set.getParent()).orElse(nullParent)));
-		Map<RndLevelset, TreeItem<RndLevelset>> nodes = new HashMap<>();
-		nodes.put(nullParent, remoteTree.getRoot());
-		createRecursively(childs.get(nullParent), childs, nodes);
+	private Map<String, TreeItem<RndLevelset>> nodesMapForTree(TreeView<RndLevelset> localTree) {
+		HashMap<String, TreeItem<RndLevelset>> result = new HashMap<>();
+		result.put(localTree.getRoot().getValue().getPath(), localTree.getRoot());
+		return result;
 	}
 
-	private void createRecursively(List<RndLevelset> list, Map<RndLevelset, List<RndLevelset>> childs, Map<RndLevelset, TreeItem<RndLevelset>> nodes) {
+	private void populateRemoteTree(RndDbSource source) {
+		List<RndLevelset> allSets = source.getAllLevelSets();
+		allSets.sort(Comparator.comparingInt(ls -> ls.getPath().length()));
+		allSets.forEach(logger::info);
+		
+		RndLevelset nullParent = remoteTree.getRoot().getValue();
+		Map<String, List<RndLevelset>> childs = allSets.stream().collect(Collectors.groupingBy(set -> Optional.ofNullable(set.getParentPath()).orElse(nullParent.getPath())));
+		logger.info(childs);
+		Map<String, TreeItem<RndLevelset>> nodes = new HashMap<>();
+		nodes.put(nullParent.getPath(), remoteTree.getRoot());
+		createRecursively(childs.get(nullParent.getPath()), childs, nodes);
+	}
+
+	private void createRecursively(List<RndLevelset> list, Map<String, List<RndLevelset>> childs, Map<String, TreeItem<RndLevelset>> nodes) {
 		Consumer<RndLevelset> create = lset -> {
 			TreeItem<RndLevelset> item = new TreeItem<>(lset);
 			item.setGraphic(lset.isLevelGroup() ? new Label("GRP") : new CheckBox());
-			nodes.put(lset, item);
-			TreeItem<RndLevelset> parent = lset.getParent() != null ? nodes.get(lset.getParent()) : remoteTree.getRoot();
+			nodes.put(lset.getPath(), item);
+			TreeItem<RndLevelset> parent = lset.hasParentPath() ? nodes.get(lset.getParentPath()) : remoteTree.getRoot();
 			parent.getChildren().add(item);
 		};
 		
@@ -229,7 +288,7 @@ public class OverviewController implements RootPathFinder {
 		
 		list.stream().filter(set -> set.isLevelGroup()).forEach(set -> {
 			create.accept(set);
-			createRecursively(childs.get(set), childs, nodes);
+			createRecursively(childs.get(set.getPath()), childs, nodes);
 		});
 	}
 

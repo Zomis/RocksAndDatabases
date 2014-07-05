@@ -20,7 +20,6 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
-import javax.persistence.PrePersist;
 import javax.persistence.Transient;
 
 import net.zomis.chunks.ChunkRead;
@@ -74,14 +73,16 @@ public class RndLevelset {
 	
 	@Override
 	public String toString() {
-		return String.format("%s: %s. (%d--%d, %s)", author, name, firstLevel, levelCount - firstLevel, checksum);
+		return String.format("ID %s. %s: %s. (%d--%d, %s)", id, author, name, firstLevel, levelCount - firstLevel, checksum);
 	}
 	
 	private int	firstLevel;
 	private int	levelCount;
 
-	@ManyToOne(cascade = CascadeType.PERSIST)
+//	@ManyToOne(cascade = CascadeType.PERSIST)
 	@Deprecated
+	@Transient
+	@JsonIgnore
 	private RndLevelset	parent;
 
 	private boolean	levelGroup;
@@ -190,7 +191,6 @@ public class RndLevelset {
 		}
 	}
 
-	@PrePersist
 	public void calcMD5() {
 		StringBuilder str = new StringBuilder();
 		str.append(this.author);
@@ -249,12 +249,34 @@ public class RndLevelset {
 	}
 
 	@Deprecated
+	@JsonIgnore
 	public void setParent(RndLevelset parent) {
 		this.parent = parent;
 	}
 
 	public void clearLevelsForSending() {
 		this.files = new ArrayList<>();
+	}
+
+	@JsonIgnore
+	public String getParentPath() {
+		String filePath = new File(getPath()).getParentFile().getAbsolutePath();
+		String base = new File("").getAbsolutePath(); // "/var/data";
+		String relative = new File(base).toURI().relativize(new File(filePath).toURI()).getPath();
+		return relative + "/";
+	}
+
+	@JsonIgnore
+	public boolean hasParentPath() {
+		return getParentPath().chars().filter(ch -> ch == '/').count() > 1;
+	}
+
+	public boolean hasID() {
+		return id != null;
+	}
+
+	public boolean hasChecksum() {
+		return this.getChecksum() != null;
 	}
 	
 }

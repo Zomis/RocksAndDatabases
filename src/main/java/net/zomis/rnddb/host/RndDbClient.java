@@ -67,6 +67,8 @@ public class RndDbClient implements RndDbSource {
 	}
 
 	public void downloadLevelSet(File root, RndLevelset value) throws InterruptedException, IOException {
+		
+		
 		send("DLOD " + value.getChecksum());
 		List<String> datas = takeUntilEnd();
 		
@@ -77,10 +79,6 @@ public class RndDbClient implements RndDbSource {
 		RndFile file = null;
 		StringBuilder fileData = new StringBuilder();
 		for (String data : datas) {
-//			if (data.startsWith("DEND")) {
-//				break;
-//			}
-			
 			if (file == null) {
 				file = mapper.reader(RndFile.class).readValue(data);
 				file.setLevelset(levelset);
@@ -91,6 +89,7 @@ public class RndDbClient implements RndDbSource {
 				String hex = fileData.toString();
 				fileData = new StringBuilder();
 				file.getFile().getParentFile().mkdirs();
+				logger.info("Writing file " + file.getFile());
 				Files.write(file.getFile().toPath(), MD5Util.hex2byte(hex), StandardOpenOption.CREATE);
 				file = null;
 			}
@@ -116,7 +115,7 @@ public class RndDbClient implements RndDbSource {
 		String take;
 		while (true) {
 			take = messages.take();
-			logger.info("Take: " + take);
+			logger.trace("Take: " + take);
 			if (take.endsWith("DEND")) {
 				break;
 			}
