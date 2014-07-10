@@ -53,8 +53,8 @@ public class OverviewController implements RootPathFinder {
 		return controller;
 	}
 	
-	
 	private final RndDbSource	local;
+	
 	@FXML
 	private TreeView<RndLevelset> localTree;
 	

@@ -1,7 +1,6 @@
 package net.zomis.rnddb.host;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -103,7 +102,8 @@ public class RndDbServer implements AutoCloseable, RndDbSource {
 							RndReadStream stream = RndReadStream.readUntilEnd(incoming);
 							RndLevelset levelset = stream.readJSON(RndLevelset.class);
 							levelset.clearLevelsForSending();
-							levelset.setRootPath(new File(rootPath.getRootPath(), "levels/uploaded"));
+							levelset.setRootPath(rootPath.getRootPath());
+//							levelset.setRootPath(new File(rootPath.getRootPath(), "levels/uploaded"));
 							List<RndFileWithData> files = stream.readFilesWithData(levelset);
 							for (RndFileWithData file : files) {
 								file.getFile().setLevelset(levelset);

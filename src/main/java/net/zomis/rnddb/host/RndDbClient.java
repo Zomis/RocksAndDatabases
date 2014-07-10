@@ -71,21 +71,9 @@ public class RndDbClient implements RndDbSource {
 		levelset.setRootPath(root);
 		
 		List<RndFileWithData> files = read.readFilesWithData(levelset);
-		for (RndFileWithData file : files) {
-			logger.info("Writing file " + file.getFile());
-			file.saveToDisc();
+		for (RndFileWithData file : files) { 
+			file.saveToDisc();// throws exception and cannot use lambdas
 		}
-		
-//		 * Client: DLOD md5
-//		 * Server: `RndLevelset` JSON
-//		 * Server: `RndFile` JSON data
-//		 * Server: hex
-//		 * Server: hex...
-//		 * Server: FEND
-//		 * Server: `RndFile` JSON data
-//		 * Server: hex
-//		 * Server: hex...
-//		 * Server: DEND
 	}
 	
 	@Deprecated

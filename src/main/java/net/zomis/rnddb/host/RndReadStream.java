@@ -44,6 +44,7 @@ public class RndReadStream {
 	}
 	
 	public static RndReadStream readUntilEnd(BlockingQueue<String> incoming) throws InterruptedException {
+		// TODO: Make it possible to process things while reading them. To use less resources.
 		List<String> takes = new ArrayList<>();
 		String take;
 		while (true) {

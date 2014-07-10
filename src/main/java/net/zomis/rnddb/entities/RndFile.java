@@ -91,4 +91,9 @@ public class RndFile {
 		this.size = file.length();
 	}
 	
+	@Override
+	public String toString() {
+		return "File " + filename + " in levelset " + levelset;
+	}
+	
 }
