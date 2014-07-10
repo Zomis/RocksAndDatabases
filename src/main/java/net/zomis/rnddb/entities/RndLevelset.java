@@ -263,7 +263,7 @@ public class RndLevelset {
 		String filePath = new File(getPath()).getParentFile().getAbsolutePath();
 		String base = new File("").getAbsolutePath(); // "/var/data";
 		String relative = new File(base).toURI().relativize(new File(filePath).toURI()).getPath();
-		return relative + "/";
+		return relative.endsWith("/") ? relative : relative + "/";
 	}
 
 	@JsonIgnore

@@ -27,6 +27,7 @@ import org.apache.log4j.PropertyConfigurator;
 
 
 public class Main extends Application {
+	private static final int DEFAULT_PORT = 7332;
 	private static final Logger logger = LogManager.getLogger(Main.class);
 	private EntityManagerFactory emf;
 	private RndDbSource db;
@@ -71,7 +72,7 @@ public class Main extends Application {
 			emf = DatabaseConfig.fromFile(new File("connection.properties"));
 			
 			RedirectRootPathFinder changer = new RedirectRootPathFinder();
-			db = new RndDbServer(changer, new RndDatabaseManager(emf));
+			db = new RndDbServer(DEFAULT_PORT, changer, new RndDatabaseManager(emf));
 			OverviewController overview = OverviewController.start(db, db);
 			changer.redirect = overview;
 			window.close();
@@ -95,16 +96,16 @@ public class Main extends Application {
 		emf = DatabaseConfig.localhostEmbedded();
 		String address = serverAddress.getText();
 		String[] split = address.split(":");
-		int port = 4242;
+		int connectPort = DEFAULT_PORT;
 		if (split[0].isEmpty()) {
 			split[0] = "127.0.0.1";
 		}
 		if (split.length > 1) {
-			port = Integer.parseInt(split[1]);
+			connectPort = Integer.parseInt(split[1]);
 		}
 		try {
 			RndDatabaseManager local =  new RndDatabaseManager(emf);
-			db = new RndDbClient(split[0], port);
+			db = new RndDbClient(split[0], connectPort);
 			OverviewController.start(local, db);
 			window.close();
 		}

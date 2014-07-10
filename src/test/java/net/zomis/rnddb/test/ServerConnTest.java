@@ -4,7 +4,6 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
 import net.zomis.rnddb.entities.RndLevelset;
@@ -21,6 +20,7 @@ import org.junit.Test;
 public class ServerConnTest {
 	private static final Logger logger = LogManager
 			.getLogger(ServerConnTest.class);
+	private static final int port = 4242;
 	private RndDbSource source;
 
 	@Before
@@ -43,13 +43,13 @@ public class ServerConnTest {
 	}
 	
 	@Test(timeout = 20000)
-	public void serverClient() throws Exception {
-		try (RndDbServer server = new RndDbServer(null, source)) {
+	public void fetchLevelsetsFromServer() throws Exception {
+		try (RndDbServer server = new RndDbServer(port, null, source)) {
 			Thread.sleep(2000);
-			RndDbClient client = new RndDbClient("127.0.0.1", 4242);
+			RndDbClient client = new RndDbClient("127.0.0.1", port);
 			Thread.sleep(2000);
-			List<RndLevelset> sets = client.getAllLevelSets();
 			
+			List<RndLevelset> sets = client.getAllLevelSets();
 			assertEquals(1, sets.size());
 //			assertEquals(11, sets.get(0).getLevels().size());
 		}
@@ -57,24 +57,37 @@ public class ServerConnTest {
 	
 	@Test(timeout = 40000)
 	public void serverClientTransferFiles() throws Exception {
-		try (RndDbServer server = new RndDbServer(null, source)) {
+		try (RndDbServer server = new RndDbServer(port, null, source)) {
 			Thread.sleep(2000);
-			RndDbClient client = new RndDbClient("127.0.0.1", 4242);
+			RndDbClient client = new RndDbClient("127.0.0.1", port);
 			Thread.sleep(2000);
 			
 			List<RndLevelset> sets = client.getAllLevelSets();
 			assertEquals(1, sets.size());
 			
-			Path dir = Files.createTempDirectory("zomisrnddb");
-			client.downloadLevelSet(dir.toFile(), sets.get(0));
+			File dir = Files.createTempDirectory("zomisrnddb").toFile();
+			client.downloadLevelSet(dir, sets.get(0));
 			
-			logger.info("Directory: " + dir.toFile().getAbsolutePath());
-			logger.info("Files: " + dir.toFile().list().length);
-			for (File file : dir.toFile().listFiles()) {
+			logger.info("Directory: " + dir.getAbsolutePath());
+			logger.info("Files: " + dir.list().length);
+			for (File file : dir.listFiles()) {
 				logger.info("File: " + file.getAbsolutePath());
 			}
-			assertNotEquals(0, dir.toFile().list().length);
+			assertNotEquals(0, dir.list().length);
+			deleteRecursive(dir);
 		}
+	}
+
+	private void deleteRecursive(File file) {
+		if (file.isDirectory()) {
+			for (File f : file.listFiles()) {
+				if (f.isDirectory()) {
+					deleteRecursive(f);
+				}
+				else f.delete();
+			}
+		}
+		file.delete();
 	}
 	
 }

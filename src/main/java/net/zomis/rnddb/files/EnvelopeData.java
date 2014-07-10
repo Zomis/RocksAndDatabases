@@ -30,7 +30,6 @@ public class EnvelopeData {
 	
 	@OnRead(RocksLevel.class)
 	public void read(SerializationContext context, RocksLevel rocks) throws IOException {
-//		System.out.println("TODO: Don't skip NOTE chunk");
 		context.skip(context.getExpectedBytes());
 	}
 	

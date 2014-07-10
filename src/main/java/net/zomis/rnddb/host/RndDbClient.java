@@ -7,8 +7,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -17,12 +15,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import net.zomis.rnddb.entities.RndFile;
 import net.zomis.rnddb.entities.RndLevel;
 import net.zomis.rnddb.entities.RndLevelset;
-import net.zomis.utils.MD5Util;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class RndDbClient implements RndDbSource {
@@ -67,33 +63,17 @@ public class RndDbClient implements RndDbSource {
 	}
 
 	public void downloadLevelSet(File root, RndLevelset value) throws InterruptedException, IOException {
-		
-		
 		send("DLOD " + value.getChecksum());
-		List<String> datas = takeUntilEnd();
 		
-		RndLevelset levelset = mapper.reader(RndLevelset.class).readValue(datas.get(0));
+		RndReadStream read = RndReadStream.readUntilEnd(messages);
+		
+		RndLevelset levelset = read.readJSON(RndLevelset.class);
 		levelset.setRootPath(root);
-		datas.remove(0);
 		
-		RndFile file = null;
-		StringBuilder fileData = new StringBuilder();
-		for (String data : datas) {
-			if (file == null) {
-				file = mapper.reader(RndFile.class).readValue(data);
-				file.setLevelset(levelset);
-				continue;
-			}
-			
-			if (data.startsWith("FEND")) {
-				String hex = fileData.toString();
-				fileData = new StringBuilder();
-				file.getFile().getParentFile().mkdirs();
-				logger.info("Writing file " + file.getFile());
-				Files.write(file.getFile().toPath(), MD5Util.hex2byte(hex), StandardOpenOption.CREATE);
-				file = null;
-			}
-			else fileData.append(data);
+		List<RndFileWithData> files = read.readFilesWithData(levelset);
+		for (RndFileWithData file : files) {
+			logger.info("Writing file " + file.getFile());
+			file.saveToDisc();
 		}
 		
 //		 * Client: DLOD md5
@@ -106,10 +86,9 @@ public class RndDbClient implements RndDbSource {
 //		 * Server: hex
 //		 * Server: hex...
 //		 * Server: DEND
-		
-		
 	}
 	
+	@Deprecated
 	private List<String> takeUntilEnd() throws InterruptedException {
 		List<String> takes = new ArrayList<>();
 		String take;
@@ -127,12 +106,15 @@ public class RndDbClient implements RndDbSource {
 	@Override
 	public RndLevelset saveLevelSet(RndLevelset value) {
 		try {
-			send("SSET " + mapper.writeValueAsString(value));
+		 	RndWriteStream write = new RndWriteStream(out);
+			send("SSET");
+			write.sendFiles(value, value.getLevels());
+			
 			SendMessage result = receive();
 			logger.info(result.getMessage());
-			return result.getSets().stream().findFirst().orElse(null);
+			return null; // result.getSets().stream().findFirst().orElse(null);
 		}
-		catch (JsonProcessingException e) {
+		catch (IOException e) {
 			logger.error("Error sending request", e);
 			return null;
 		}

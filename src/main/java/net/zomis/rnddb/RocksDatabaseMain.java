@@ -15,7 +15,7 @@ public class RocksDatabaseMain {
 
 	public static void main(String[] args) {
 		/* x Prio 1: Scan levels, save to local database (Postgres)
-		 * - levelsets to .zip ---> Save as file, not bytearraay in database
+		 * # levelsets to .zip ---> Save as file, not bytearraay in database
 		 * - levelsets is the interesting things, not levels and/or levelgroups
 		 * - use md5-sum of levelset/zip to determine if it already exists locally/remotely
 		 * Client: LOAD
@@ -33,12 +33,16 @@ public class RocksDatabaseMain {
 		 * Server: DATA hex
 		 * Server: DEND
 		 * 
-		 * Prio 2: Request levels/levelsets from a server
+		 * x Prio 2: Request levels/levelsets from a server
 		 * String location: server:port/id
 		 * String location: path
 		 * 
 		 * Prio 3: Upload levels/levelsets to server
 		 * - when uploading, check if MD5 (of levelset_name+level_number + file contents) already exists or not. If it does, don't add another one.
+		 * - TODO: Upload a levelset: levelset_id is not filled
+		 * x Upload a levelset: saved to the wrong location on disk. Should be saved to the RnD directory
+		 * 
+		 * Prio 4: Synchronizing scores (prevent cheats?)
 		 * 
 		 * Prio 4: Modifying/Branching existing levels
 		 * - requires users and permissions?

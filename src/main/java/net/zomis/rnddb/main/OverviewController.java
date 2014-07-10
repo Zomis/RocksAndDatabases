@@ -240,12 +240,10 @@ public class OverviewController implements RootPathFinder {
 			TreeItem<RndLevelset> item = new TreeItem<>(lset);
 			item.setGraphic(lset.isLevelGroup() ? new Label("GRP") : new CheckBox());
 			nodes.put(lset.getPath(), item);
-			logger.trace("Nodes add: " + lset.getPath() + " == " + item);
-			logger.trace("Nodes search: " + lset.getParentPath());
-			
 			TreeItem<RndLevelset> parent = lset.hasParentPath() ? nodes.get(lset.getParentPath()) : localTree.getRoot();
-			
-			parent.getChildren().add(item);
+			logger.debug("Nodes add: " + lset.getPath() + " == " + item + " search for " + lset.getParentPath() + " parent found " + parent);
+			List<TreeItem<RndLevelset>> kids = parent.getChildren();
+			kids.add(item);
 		});
 	}
 	
