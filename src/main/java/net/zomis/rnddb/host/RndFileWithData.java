@@ -28,6 +28,10 @@ public class RndFileWithData {
 	}
 	
 	public void saveToDisc() throws IOException {
+		if (file.getFile().exists()) {
+			throw new IOException("File already exists");
+		}
+		
 		logger.info("Writing file " + file.getFile());
 		file.getFile().getParentFile().mkdirs();
 		Files.write(file.getFile().toPath(), bytes, StandardOpenOption.CREATE);

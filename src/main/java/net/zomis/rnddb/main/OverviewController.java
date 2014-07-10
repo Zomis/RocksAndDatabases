@@ -34,69 +34,47 @@ import org.apache.log4j.Logger;
 
 public class OverviewController implements RootPathFinder {
 
+	enum Mode {
+		AS_SERVER,// See actual files on left, database on right
+		CONNECTED, // See actual files on left, database on right
+		LOCAL_ONLY; // See actual files (+db?) on left, remote on right
+	}
 	private static final Logger logger = LogManager.getLogger(OverviewController.class);
+	
 	private static final String USER_DIR = "USER_DIR";
+	public static OverviewController start(RndDbSource local, RndDbSource db) {
+		OverviewController controller = new OverviewController(local, db);
+		controller.scanAll();
+		return controller;
+	}
 	
-	private final RndDbSource	remote;
+	public static OverviewController create(RndDbSource local, RndDbSource db) {
+		OverviewController controller = new OverviewController(local, db);
+		return controller;
+	}
+	
+	
 	private final RndDbSource	local;
-	private final Preferences prefs = Preferences.userNodeForPackage(getClass());
-	private File userDirectory;
-	
 	@FXML
 	private TreeView<RndLevelset> localTree;
+	
+	private final Preferences prefs = Preferences.userNodeForPackage(getClass());
 
+	private final RndDbSource	remote;
 	@FXML
 	private TreeView<RndLevelset> remoteTree;
+	
+	private Pane root;
+	
 	private final Stage stage;
 	
-	private File getDirectory() {
-		String storedPath = prefs.get(USER_DIR, "");
-		if (verifyRnDDir(storedPath))
-			return new File(storedPath);
-		
-		DirectoryChooser fileChooser = new DirectoryChooser();
-//		fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
-		fileChooser.setTitle("Find Rocks'n'Diamonds Directory");
-		File dir = fileChooser.showDialog(stage);
-		if (dir == null) {
-			return null;
-		}
-		
-		if (verifyRnDDir(dir.getAbsolutePath())) {
-			prefs.put(USER_DIR, dir.getAbsolutePath());
-		}
-		
-		return dir;
-	}
 	
-	@FXML
-	private void chooseBaseDirectory(ActionEvent event) {
-		prefs.remove(USER_DIR);
-		getDirectory();
-	}
-	
-	
-	private boolean verifyRnDDir(String fileName) {
-		File file = new File(fileName);
-		if (!file.exists()) {
-			return false;
-		}
-		
-		File setupConf = new File(file, "levelsetup.conf");
-		return setupConf.exists();
-	}
+	private File userDirectory;
 
-	enum Mode {
-		LOCAL_ONLY,// See actual files on left, database on right
-		AS_SERVER, // See actual files on left, database on right
-		CONNECTED; // See actual files (+db?) on left, remote on right
-	}
-	
 	private OverviewController(RndDbSource local, RndDbSource db) {
 		this.remote = db;
 		this.local = local;
 		
-		Pane root;
 		try {
 			FXMLLoader loader = new FXMLLoader(getClass().getResource("rnddbMain.fxml"));
 			loader.setController(this);
@@ -127,13 +105,54 @@ public class OverviewController implements RootPathFinder {
         remoteRootItem.setGraphic(new CheckBox());
         remoteTree.setRoot(remoteRootItem);
 		
+//		localTree.setPrefSize(localTree.getPrefWidth(), Double.MAX_VALUE);
+//		remoteTree.setPrefSize(remoteTree.getPrefWidth(), Double.MAX_VALUE);
+		
 		userDirectory = getDirectory();
 		logger.info("User Directory is " + userDirectory);
-		this.scanAll(null);
 	}
-
-	public static OverviewController start(RndDbSource local, RndDbSource db) {
-		return new OverviewController(local, db);
+	
+	@FXML
+	private void chooseBaseDirectory(ActionEvent event) {
+		prefs.remove(USER_DIR);
+		getDirectory();
+	}
+	
+	private void createLevelsInfoConf(File downloadDir, File rootDirectory) throws IOException {
+		if (downloadDir.getParentFile().getAbsoluteFile().equals(rootDirectory.getAbsoluteFile())) {
+			return;
+		}
+		downloadDir.mkdirs();
+		File saveFile = new File(downloadDir, "levelinfo.conf");
+		if (!saveFile.exists()) {
+			logger.info("Creating conf at " + saveFile);
+			Files.copy(OverviewController.class.getResourceAsStream("levelinfo.conf"), saveFile.toPath());
+		}
+		createLevelsInfoConf(downloadDir.getParentFile(), rootDirectory);
+	}
+	
+	private void createRecursively(List<RndLevelset> list, Map<String, List<RndLevelset>> childs, Map<String, TreeItem<RndLevelset>> nodes) {
+		Consumer<RndLevelset> create = lset -> {
+			TreeItem<RndLevelset> item = new TreeItem<>(lset);
+			item.setGraphic(lset.isLevelGroup() ? new Label("GRP") : new CheckBox());
+			nodes.put(lset.getPath(), item);
+			TreeItem<RndLevelset> parent = lset.hasParentPath() ? nodes.get(lset.getParentPath()) : remoteTree.getRoot();
+			parent.getChildren().add(item);
+		};
+		
+		logger.info("Scanning " + list);
+		
+		if (list == null) {
+			logger.warn("List is null.");
+			return;
+		}
+		
+		list.stream().filter(set -> !set.isLevelGroup()).forEach(create);
+		
+		list.stream().filter(set -> set.isLevelGroup()).forEach(set -> {
+			create.accept(set);
+			createRecursively(childs.get(set.getPath()), childs, nodes);
+		});
 	}
 
 	@FXML
@@ -161,7 +180,7 @@ public class OverviewController implements RootPathFinder {
 			}
 		}
 	}
-	
+
 	private void downloadNode(RndDbClient client, TreeItem<RndLevelset> root) throws InterruptedException, IOException {
 		File downloadDir = new File(userDirectory, "levels/download");
 		createLevelsInfoConf(new File(downloadDir, "levels"), userDirectory);
@@ -185,30 +204,62 @@ public class OverviewController implements RootPathFinder {
 		}
 		
 	}
-
-	private void createLevelsInfoConf(File downloadDir, File rootDirectory) throws IOException {
-		if (downloadDir.getParentFile().getAbsoluteFile().equals(rootDirectory.getAbsoluteFile())) {
-			return;
+	
+	private File getDirectory() {
+		String storedPath = prefs.get(USER_DIR, "");
+		if (verifyRnDDir(storedPath))
+			return new File(storedPath);
+		
+		DirectoryChooser fileChooser = new DirectoryChooser();
+//		fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+		fileChooser.setTitle("Find Rocks'n'Diamonds Directory");
+		File dir = fileChooser.showDialog(stage);
+		if (dir == null) {
+			return null;
 		}
-		downloadDir.mkdirs();
-		File saveFile = new File(downloadDir, "levelinfo.conf");
-		if (!saveFile.exists()) {
-			logger.info("Creating conf at " + saveFile);
-			Files.copy(OverviewController.class.getResourceAsStream("levelinfo.conf"), saveFile.toPath());
+		
+		if (verifyRnDDir(dir.getAbsolutePath())) {
+			prefs.put(USER_DIR, dir.getAbsolutePath());
 		}
-		createLevelsInfoConf(downloadDir.getParentFile(), rootDirectory);
+		
+		return dir;
 	}
 
-	@FXML
-	private void upload(ActionEvent event) {
-		this.saveNodeToDB(localTree.getRoot());
+	public Pane getRoot() {
+		return root;
+	}
+
+	@Override
+	public File getRootPath() {
+		return this.userDirectory;
 	}
 	
-	private void showDBcontents(ActionEvent event) {
-		remote.getAllLevelSets().forEach(level -> logger.debug("DB: " + level));
-		populateRemoteTree(remote);
+	private Map<String, TreeItem<RndLevelset>> nodesMapForTree(TreeView<RndLevelset> localTree) {
+		HashMap<String, TreeItem<RndLevelset>> result = new HashMap<>();
+		result.put(localTree.getRoot().getValue().getPath(), localTree.getRoot());
+		return result;
 	}
 	
+	private void populateRemoteTree(RndDbSource source) {
+		List<RndLevelset> allSets = source.getAllLevelSets();
+		allSets.sort(Comparator.comparingInt(ls -> ls.getPath().length()));
+		allSets.forEach(logger::info);
+		
+		RndLevelset nullParent = remoteTree.getRoot().getValue();
+		Map<String, List<RndLevelset>> childs = allSets.stream().collect(Collectors.groupingBy(set -> Optional.ofNullable(set.getParentPath()).orElse(nullParent.getPath())));
+		logger.info(childs);
+		Map<String, TreeItem<RndLevelset>> nodes = new HashMap<>();
+		nodes.put(nullParent.getPath(), remoteTree.getRoot());
+		createRecursively(childs.get(nullParent.getPath()), childs, nodes);
+	}
+
+	private void realSaveNode(TreeItem<RndLevelset> node) {
+		RndLevelset levelset = node.getValue();
+		levelset.readFiles();
+		levelset.calcMD5();
+		remote.saveLevelSet(levelset);
+	}
+
 	private void saveNodeToDB(TreeItem<RndLevelset> root) {
 		root.getChildren().stream().filter(node -> !node.isLeaf()).forEach(this::saveNodeToDB);
 		
@@ -224,15 +275,8 @@ public class OverviewController implements RootPathFinder {
 			realSaveNode(leaf);
 		});
 	}
-
-	private void realSaveNode(TreeItem<RndLevelset> node) {
-		RndLevelset levelset = node.getValue();
-		levelset.readFiles();
-		levelset.calcMD5();
-		remote.saveLevelSet(levelset);
-	}
-
-	private void scanAll(ActionEvent event) {
+	
+	public void scanAll() {
 		logger.info("Scanning " + userDirectory);
 		Map<String, TreeItem<RndLevelset>> nodes = nodesMapForTree(localTree);
 		logger.info("Nodes: " + nodes);
@@ -241,58 +285,34 @@ public class OverviewController implements RootPathFinder {
 			item.setGraphic(lset.isLevelGroup() ? new Label("GRP") : new CheckBox());
 			nodes.put(lset.getPath(), item);
 			TreeItem<RndLevelset> parent = lset.hasParentPath() ? nodes.get(lset.getParentPath()) : localTree.getRoot();
-			logger.debug("Nodes add: " + lset.getPath() + " == " + item + " search for " + lset.getParentPath() + " parent found " + parent);
+			logger.trace("Nodes add: " + lset.getPath() + " == " + item + " search for " + lset.getParentPath() + " parent found " + parent);
 			List<TreeItem<RndLevelset>> kids = parent.getChildren();
 			kids.add(item);
 		});
 	}
+
+	public void setUserDirectory(File userDirectory) {
+		this.userDirectory = userDirectory;
+	}
+
+	private void showDBcontents(ActionEvent event) {
+		remote.getAllLevelSets().forEach(level -> logger.debug("DB: " + level));
+		populateRemoteTree(remote);
+	}
+
+	@FXML
+	private void upload(ActionEvent event) {
+		this.saveNodeToDB(localTree.getRoot());
+	}
 	
-	private Map<String, TreeItem<RndLevelset>> nodesMapForTree(TreeView<RndLevelset> localTree) {
-		HashMap<String, TreeItem<RndLevelset>> result = new HashMap<>();
-		result.put(localTree.getRoot().getValue().getPath(), localTree.getRoot());
-		return result;
-	}
-
-	private void populateRemoteTree(RndDbSource source) {
-		List<RndLevelset> allSets = source.getAllLevelSets();
-		allSets.sort(Comparator.comparingInt(ls -> ls.getPath().length()));
-		allSets.forEach(logger::info);
-		
-		RndLevelset nullParent = remoteTree.getRoot().getValue();
-		Map<String, List<RndLevelset>> childs = allSets.stream().collect(Collectors.groupingBy(set -> Optional.ofNullable(set.getParentPath()).orElse(nullParent.getPath())));
-		logger.info(childs);
-		Map<String, TreeItem<RndLevelset>> nodes = new HashMap<>();
-		nodes.put(nullParent.getPath(), remoteTree.getRoot());
-		createRecursively(childs.get(nullParent.getPath()), childs, nodes);
-	}
-
-	private void createRecursively(List<RndLevelset> list, Map<String, List<RndLevelset>> childs, Map<String, TreeItem<RndLevelset>> nodes) {
-		Consumer<RndLevelset> create = lset -> {
-			TreeItem<RndLevelset> item = new TreeItem<>(lset);
-			item.setGraphic(lset.isLevelGroup() ? new Label("GRP") : new CheckBox());
-			nodes.put(lset.getPath(), item);
-			TreeItem<RndLevelset> parent = lset.hasParentPath() ? nodes.get(lset.getParentPath()) : remoteTree.getRoot();
-			parent.getChildren().add(item);
-		};
-		
-		logger.info("Scanning " + list);
-		
-		if (list == null) {
-			logger.warn("List is null.");
-			return;
+	private boolean verifyRnDDir(String fileName) {
+		File file = new File(fileName);
+		if (!file.exists()) {
+			return false;
 		}
 		
-		list.stream().filter(set -> !set.isLevelGroup()).forEach(create);
-		
-		list.stream().filter(set -> set.isLevelGroup()).forEach(set -> {
-			create.accept(set);
-			createRecursively(childs.get(set.getPath()), childs, nodes);
-		});
-	}
-
-	@Override
-	public File getRootPath() {
-		return this.userDirectory;
+		File setupConf = new File(file, "levelsetup.conf");
+		return setupConf.exists();
 	}
 	
 	

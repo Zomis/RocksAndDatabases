@@ -13,7 +13,7 @@
       <menus>
         <Menu mnemonicParsing="false" text="File">
           <items>
-            <MenuItem mnemonicParsing="false" text="Set base directory" onAction="#chooseBaseDirectory" />
+            <MenuItem mnemonicParsing="false" onAction="#chooseBaseDirectory" text="Set base directory" />
             <MenuItem mnemonicParsing="false" text="Open…" />
             <Menu mnemonicParsing="false" text="Open Recent" />
             <SeparatorMenuItem mnemonicParsing="false" />
@@ -68,8 +68,8 @@
          <center>
             <AnchorPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
                <children>
-                  <Button layoutX="73.0" layoutY="188.0" mnemonicParsing="false" onAction="#upload" prefHeight="42.0" prefWidth="100.0" text="---&gt;" />
-                  <Button layoutX="73.0" layoutY="125.0" mnemonicParsing="false" onAction="#download" prefHeight="42.0" prefWidth="100.0" text="&lt;---" />
+                  <Button fx:id="uploadButton" layoutX="73.0" layoutY="188.0" mnemonicParsing="false" onAction="#upload" prefHeight="42.0" prefWidth="100.0" text="---&gt;" />
+                  <Button fx:id="downloadButton" layoutX="73.0" layoutY="125.0" mnemonicParsing="false" onAction="#download" prefHeight="42.0" prefWidth="100.0" text="&lt;---" />
                </children>
             </AnchorPane>
          </center>
