@@ -40,7 +40,7 @@ public class RndWriteStream {
 	}
 
 	private void send(String string) {
-		logger.debug("Sending " + string.length() + ": " + string);
+		logger.debug("Sending " + string.length() + ": " + string.substring(0, Math.min(100, string.length())));
 		out.write(string + (char) 0);
 		out.flush();
 	}

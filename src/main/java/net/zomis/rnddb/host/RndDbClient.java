@@ -44,9 +44,9 @@ public class RndDbClient implements RndDbSource {
 		try {
 			while ((bytesRead = in.read(readBuffer)) != -1) {
 				String message = new String(readBuffer, 0, bytesRead);
-				for (String mess : message.split(splitString)) {
-					logger.debug("Incoming " + mess.length() + ": " + mess);
-					messages.offer(mess);
+				for (String string : message.split(splitString)) {
+					logger.debug("Incoming " + string.length() + ": " + string.substring(0, Math.min(100, string.length())));
+					messages.offer(string);
 				}
 				
 			}

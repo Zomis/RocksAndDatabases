@@ -20,7 +20,7 @@ import org.junit.Test;
 public class ServerConnTest {
 	private static final Logger logger = LogManager
 			.getLogger(ServerConnTest.class);
-	private static final int port = 4242;
+	private static final int port = 4243;
 	private RndDbSource source;
 
 	@Before

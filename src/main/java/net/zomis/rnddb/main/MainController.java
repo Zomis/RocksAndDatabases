@@ -16,7 +16,6 @@ import net.zomis.rnddb.host.RndDbClient;
 import net.zomis.rnddb.host.RndDbServer;
 import net.zomis.rnddb.host.RndDbSource;
 import net.zomis.rnddb.host.RootPathFinder;
-import net.zomis.rnddb.test.MockSource;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -95,8 +94,9 @@ public class MainController {
 	
 	@FXML
 	private void test(ActionEvent event) {
-		OverviewController.start(new MockSource(), new MockSource()).getRoot();
-		close(event);
+//		OverviewController.start(new MockSource(), new MockSource()).getRoot();
+//		
+//		close(event);
 	}
 	
 }
