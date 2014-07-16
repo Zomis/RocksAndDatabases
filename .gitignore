@@ -12,3 +12,10 @@
 *.ear
 
 hs_err_pid*
+/test-client-dir/
+/test-server-dir/
+
+demodb*
+tempdb*
+/dependency-reduced-pom.xml
+/nbactions.xml
