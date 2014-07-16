@@ -88,7 +88,7 @@ public class OverviewController implements RootPathFinder {
 		}
 		stage = new Stage();
 		stage.setTitle("Rocks'n'Diamonds Database");
-		stage.setScene(new Scene(root, 450, 450));
+		stage.setScene(new Scene(root, 800, 600));
 		stage.show();
 		stage.setOnCloseRequest(e -> db.close());
 		
