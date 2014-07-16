@@ -11,9 +11,9 @@ import javax.persistence.criteria.CriteriaQuery;
 import net.zomis.rnddb.entities.RndLevelset;
 
 
-public class RocksDatabaseMain {
+public class RocksDatabaseTodo {
 
-	public static void main(String[] args) {
+	public void ignoreThisMethod() {
 		/* x Prio 1: Scan levels, save to local database (Postgres)
 		 * # levelsets to .zip ---> Save as file, not bytearraay in database
 		 * - levelsets is the interesting things, not levels and/or levelgroups

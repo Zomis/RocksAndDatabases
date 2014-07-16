@@ -42,8 +42,11 @@ public class OverviewController implements RootPathFinder {
 	private static final Logger logger = LogManager.getLogger(OverviewController.class);
 	
 	private static final String USER_DIR = "USER_DIR";
+	
 	public static OverviewController start(RndDbSource local, RndDbSource db) {
 		OverviewController controller = new OverviewController(local, db);
+		controller.userDirectory = controller.getDirectory();
+		logger.info("User Directory is " + controller.userDirectory);
 		controller.scanAll();
 		return controller;
 	}
@@ -104,12 +107,6 @@ public class OverviewController implements RootPathFinder {
         remoteRootItem.setExpanded(true);
         remoteRootItem.setGraphic(new CheckBox());
         remoteTree.setRoot(remoteRootItem);
-		
-//		localTree.setPrefSize(localTree.getPrefWidth(), Double.MAX_VALUE);
-//		remoteTree.setPrefSize(remoteTree.getPrefWidth(), Double.MAX_VALUE);
-		
-		userDirectory = getDirectory();
-		logger.info("User Directory is " + userDirectory);
 	}
 	
 	@FXML
@@ -207,8 +204,9 @@ public class OverviewController implements RootPathFinder {
 	
 	private File getDirectory() {
 		String storedPath = prefs.get(USER_DIR, "");
-		if (verifyRnDDir(storedPath))
+		if (verifyRnDDir(storedPath)) {
 			return new File(storedPath);
+		}
 		
 		DirectoryChooser fileChooser = new DirectoryChooser();
 //		fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
